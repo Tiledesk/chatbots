@@ -122,51 +122,55 @@ app.post('/lang_select_bot', (req, res) => {
 // ****************************************************
 
 app.post('/choose_dep_bot', (req, res) => {
-  console.log("Webhook. Request body: " + JSON.stringify(req.body));
+  //console.log("Webhook. Request body: " + JSON.stringify(req.body));
   // INTENTS
   let intent = null;
-  if (req.body.payload.intent) {
-    intent = req.body.payload.intent.intent_display_name;
+  let payload = req.body.payload;
+  if (payload.intent) {
+    intent = payload.intent.intent_display_name;
   }
   console.log("Got intent:", intent);
-  let senderFullname = req.body.payload.bot.name;
-  let user_lang = req.body.payload.message.request.language;
+  let senderFullname = payload.bot.name;
+  let user_lang = payload.message.request.language;
   console.log("User language:", user_lang);
-  let multilang_bot_id = req.body.payload.bot._id;
+  let multilang_bot_id = payload.bot._id;
   console.log("Bot_id:", multilang_bot_id);
   let initial_bot_id = "bot_" + multilang_bot_id;
   console.log("initial_bot_id:", initial_bot_id);
-  let welcome_message = 'Choose a team';
+  /*let welcome_message = 'Choose a team';
   if (req.body.payload.bot.description) {
     const attributes = JSON.parse(req.body.payload.bot.description);
     if (attributes.welcome_message) {
       welcome_message = attributes.welcome_message
     }
   }
-  console.log("welcome_message:", welcome_message);
-  const text = req.body.payload.message.text;
+  console.log("welcome_message:", welcome_message);*/
+  const text = payload.message.text;
   const API_URL = apiurlByOrigin(req.headers['origin']);
-  const projectId = req.body.payload.bot.id_project;
+  const projectId = payload.bot.id_project;
   const token = req.body.token;
-  const requestId = req.body.payload.message.request.request_id;
+  const requestId = payload.message.request.request_id;
   console.log("projectId:",projectId)
   console.log("token:",token)
   console.log("requestId:",requestId)
   const tdclient = new TiledeskClient({projectId:projectId,token:token, APIURL: API_URL, APIKEY: "___", log:true});
   if (intent === 'defaultFallback') {
-    console.log("got defaultFallback", req.body.payload.message.text);
+    console.log("got defaultFallback", payload.message.text);
+    let fallback_message = 'Department not found, please choose a team';
+    if (payload.message.text) {
+      fallback_message = payload.intent.answer;
+    }
     getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
       console.log("deps:", deps);
       let dep = null;
       for(i=0; i < deps.length; i++) {
         d = deps[i];
-        if (d.name === req.body.payload.message.text) {
+        if (d.name.toLowerCase() === payload.message.text.toLowerCase()) { //  && d.status == 1
           dep = d;
           break;
         }
       }
       if (dep) {
-        //res.json({text: "Dep found:" + dep.name});
         tdclient.updateRequestDepartment(requestId, dep._id, null, (err) => {
           res.json(
             {
@@ -179,42 +183,37 @@ app.post('/choose_dep_bot', (req, res) => {
         });
       }
       else {
-        res.json({text: "Dep not found\nChoose a team" + depButtons(deps)});
+        res.json({text: fallback_message + depButtons(deps)});
       }
     });
   }
   else if (intent === 'start') {
-    //ADMIN_TOKEN = token;
-    //const ADMIN_TOKEN = 'JWT eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI1ZWJlNTIzYTkyYmVmZTAwMTkwNTRhZWMiLCJlbWFpbCI6ImFuZHJlYXNwb256aWVsbG9AdGlsZWRlc2suY29tIiwiZmlyc3RuYW1lIjoiQW5kcmVhIiwibGFzdG5hbWUiOiJTcG9uemllbGxvIiwiZW1haWx2ZXJpZmllZCI6dHJ1ZSwiaWF0IjoxNjM3OTE2NDY2LCJhdWQiOiJodHRwczovL3RpbGVkZXNrLmNvbSIsImlzcyI6Imh0dHBzOi8vdGlsZWRlc2suY29tIiwic3ViIjoidXNlciIsImp0aSI6IjYxNjMwNTA4LWRhMmMtNGQ1ZC1hMzdiLTkwNzNhMGFjYWMwMCJ9.R4K8HNGqy9LUMyiddRCYe8za8N5xOmmZDpdT-wteTkY';
-    
-    
-
-    let message = {
+    let welcome_message = 'Choose a team';
+    if (payload.message.text) {
+      welcome_message = payload.intent.answer;
+    }
+    /*let message = {
       text: req.body.payload.text + '....',
       attributes: {
         subtype: 'info'
       }
     }
-    res.json(message);
-
+    res.json(message);*/
     getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
       console.log("deps:", deps);
       const buttons = depButtons(deps);
-      console.log("buttons:", buttons);
+      //console.log("buttons:", buttons);
       let message = {
-        text: welcome_message + buttons,
-        attributes: {
-          microlanguage: true
-        }
+        text: welcome_message + buttons
       }
-      //res.json(message);
-      tdclient.sendSupportMessage(requestId, message, function(err) {
+      res.json(message);
+      /*tdclient.sendSupportMessage(requestId, message, function(err) {
         console.log("Message sent.");
-      });
-    })
+      });*/
+    });
   }
   else {
-    res.json({text: "I don't understand"});
+    res.json({text: "Intent not found."});
   }
 });
 
