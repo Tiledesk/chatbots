@@ -409,7 +409,9 @@ function myrequest(options, callback, log) {
 }
 
 app.get('/', (req, res) => {
-  res.send('Hello Tiledesk Botchooser!');
+  var pjson = require('./package.json');
+  console.log(pjson.version);
+  res.send(pjson.description + " v" + pjson.version);
 });
 
 app.listen(3000, () => {
