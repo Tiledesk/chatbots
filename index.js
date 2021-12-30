@@ -160,7 +160,8 @@ app.post('/choose_dep_bot', (req, res) => {
     if (payload.message.text) {
       fallback_message = payload.intent.answer;
     }
-    getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    //getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    tdclient.getAllDepartments((err, deps) => {
       console.log("deps:", deps);
       let dep = null;
       for(i=0; i < deps.length; i++) {
@@ -199,7 +200,8 @@ app.post('/choose_dep_bot', (req, res) => {
       }
     }
     res.json(message);*/
-    getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    //getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    tdclient.getAllDepartments((err, deps) => {
     //tdclient.getAllDepartments((err, deps) => {
       console.log("deps:", deps);
       const buttons = depButtons(deps);
@@ -228,7 +230,7 @@ function depButtons(deps) {
   return dep_buttons;
 }
 
-function getDepartments(API_URL, token, project_id, callback) {
+/*function getDepartments(API_URL, token, project_id, callback) {
   const URL = `${API_URL}/${project_id}/departments/allstatus`
   console.log("token: " + token)
   console.log("getDepartments.url: " + URL)
@@ -253,7 +255,7 @@ function getDepartments(API_URL, token, project_id, callback) {
       }
     }, true
   );
-}
+}*/
 
 // ***********************************************
 // ************** PRECHAT FORM BOT ***************
