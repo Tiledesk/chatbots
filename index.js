@@ -200,6 +200,7 @@ app.post('/choose_dep_bot', (req, res) => {
     }
     res.json(message);*/
     getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    //tdclient.getAllDepartments((err, deps) => {
       console.log("deps:", deps);
       const buttons = depButtons(deps);
       //console.log("buttons:", buttons);
@@ -253,6 +254,108 @@ function getDepartments(API_URL, token, project_id, callback) {
     }, true
   );
 }
+
+// ***********************************************
+// ************** PRECHAT FORM BOT ***************
+// ***********************************************
+
+app.post('/prechatform', (req, res) => {
+  //console.log("Webhook. Request body: " + JSON.stringify(req.body));
+  // INTENTS
+  let intent = null;
+  let payload = req.body.payload;
+  if (payload.intent) {
+    intent = payload.intent.intent_display_name;
+  }
+  console.log("Got intent:", intent);
+  let senderFullname = payload.bot.name;
+  let user_lang = payload.message.request.language;
+  console.log("User language:", user_lang);
+  let multilang_bot_id = payload.bot._id;
+  console.log("Bot_id:", multilang_bot_id);
+  let initial_bot_id = "bot_" + multilang_bot_id;
+  console.log("initial_bot_id:", initial_bot_id);
+  /*let welcome_message = 'Choose a team';
+  if (req.body.payload.bot.description) {
+    const attributes = JSON.parse(req.body.payload.bot.description);
+    if (attributes.welcome_message) {
+      welcome_message = attributes.welcome_message
+    }
+  }
+  console.log("welcome_message:", welcome_message);*/
+  const text = payload.message.text;
+  const API_URL = apiurlByOrigin(req.headers['origin']);
+  const projectId = payload.bot.id_project;
+  const token = req.body.token;
+  const requestId = payload.message.request.request_id;
+  console.log("projectId:",projectId)
+  console.log("token:",token)
+  console.log("requestId:",requestId)
+  const tdclient = new TiledeskClient({projectId:projectId,token:token, APIURL: API_URL, APIKEY: "___", log:true});
+  if (intent === 'defaultFallback') {
+    console.log("got defaultFallback", payload.message.text);
+    let fallback_message = 'Department not found, please choose a team';
+    if (payload.message.text) {
+      fallback_message = payload.intent.answer;
+    }
+    // getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    tdclient.getAllDepartments((err, deps) => {
+      console.log("deps:", deps);
+      let dep = null;
+      for(i=0; i < deps.length; i++) {
+        d = deps[i];
+        if (d.name.toLowerCase() === payload.message.text.toLowerCase()) { //  && d.status == 1
+          dep = d;
+          break;
+        }
+      }
+      if (dep) {
+        tdclient.updateRequestDepartment(requestId, dep._id, null, (err) => {
+          res.json(
+            {
+              text: "start",
+              attributes: {
+                subtype: 'info'
+              }
+            }
+          );
+        });
+      }
+      else {
+        res.json({text: fallback_message + depButtons(deps)});
+      }
+    });
+  }
+  else if (intent === 'start') {
+    let welcome_message = 'Choose a team';
+    if (payload.message.text) {
+      welcome_message = payload.intent.answer;
+    }
+    /*let message = {
+      text: req.body.payload.text + '....',
+      attributes: {
+        subtype: 'info'
+      }
+    }
+    res.json(message);*/
+    //getDepartments(API_URL, "JWT " + token, projectId, (err, deps) => {
+    tdclient.getAllDepartments((err, deps) => {
+      console.log("deps:", deps);
+      const buttons = depButtons(deps);
+      //console.log("buttons:", buttons);
+      let message = {
+        text: welcome_message + buttons
+      }
+      res.json(message);
+      /*tdclient.sendSupportMessage(requestId, message, function(err) {
+        console.log("Message sent.");
+      });*/
+    });
+  }
+  else {
+    res.json({text: "Intent not found."});
+  }
+});
 
 function apiurlByOrigin(origin) {
   const API_URL_PRE = 'https://tiledesk-server-pre.herokuapp.com';
